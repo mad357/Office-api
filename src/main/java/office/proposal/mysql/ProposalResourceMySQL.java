@@ -1,5 +1,7 @@
 package office.proposal.mysql;
 
+import exceptions.DtoValidationException;
+import exceptions.NotFoundException;
 import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -10,6 +12,8 @@ import jakarta.ws.rs.core.*;
 import office.proposal.*;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.PropertyMap;
+import util.EnumHelper;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,21 +43,25 @@ public class ProposalResourceMySQL implements IProposalResource {
         });
     }
 
+    public ProposalDto getById(long id) {
+        Proposal proposal = proposalRepository.findById(id);
+        if (proposal == null) {
+            throw new NotFoundException("Proposal was not found");
+        }
+
+        return modelMapper.map(proposal, ProposalDto.class);
+    }
+
     public List<ProposalDto> list(ProposalResource proposalResource) {
         List<Proposal> result;
-        if (proposalResource.info.getQueryParameters().size() == 0) {
-            result = proposalRepository.listAll();
-        } else {
-            MultivaluedMap<String, String> requestParameters = new MultivaluedHashMap<>(proposalResource.info.getQueryParameters());
-            setDefaultParameters(requestParameters);
+        MultivaluedMap<String, String> requestParameters = new MultivaluedHashMap<>(proposalResource.info.getQueryParameters());
+        setDefaultParameters(requestParameters);
+        StringBuilder query = new StringBuilder ();
+        Map<String, Object> queryParams = new HashMap<>();
+        addFilters(query, queryParams, requestParameters);
 
-            StringBuilder query = new StringBuilder ();
-            Map<String, Object> queryParams = new HashMap<>();
-            addFilters(query, queryParams, requestParameters);
-            appendOrderAndPagination(query, requestParameters);
+        result = proposalRepository.find(query.toString(), queryParams).page(Page.of( Integer.parseInt(requestParameters.get("page").get(0)),Integer.parseInt(requestParameters.get("limit").get(0)))).list();
 
-            result = proposalRepository.find(query.toString(), queryParams).page(Page.of( Integer.parseInt(requestParameters.get("page").get(0)),Integer.parseInt(requestParameters.get("limit").get(0)))).list();
-        }
 
         return result
                 .stream()
@@ -64,23 +72,20 @@ public class ProposalResourceMySQL implements IProposalResource {
 
     public int listSize(ProposalResource proposalResource) {
         int result;
-        if (proposalResource.info.getQueryParameters().size() == 0) {
-            result = proposalRepository.listAll().size();
-        } else {
-            MultivaluedMap<String, String> requestParameters = new MultivaluedHashMap<>(proposalResource.info.getQueryParameters());
-            setDefaultParameters(requestParameters);
-
-            StringBuilder query = new StringBuilder ();
-            Map<String, Object> nonNullParams = new HashMap<>();
-            addFilters(query, nonNullParams, requestParameters);
-
-            result = proposalRepository.find(query.toString(), nonNullParams).list().size();
-        }
+        MultivaluedMap<String, String> requestParameters = new MultivaluedHashMap<>(proposalResource.info.getQueryParameters());
+        setDefaultParameters(requestParameters);
+        StringBuilder query = new StringBuilder ();
+        Map<String, Object> nonNullParams = new HashMap<>();
+        addFilters(query, nonNullParams, requestParameters);
+        result = proposalRepository.find(query.toString(), nonNullParams).list().size();
 
         return result;
     }
 
     public Response create(ProposalResource proposalResource, @Context UriInfo uriInfo, ProposalDto proposalDto) {
+        if (proposalDto == null) {
+            throw new DtoValidationException("data not provided");
+        }
         var proposal =  modelMapper.map(proposalDto, Proposal.class);
         long id = proposalService.create(proposal);
         UriBuilder uriBuilder = uriInfo.getAbsolutePathBuilder();
@@ -88,6 +93,36 @@ public class ProposalResourceMySQL implements IProposalResource {
         return Response.created(uriBuilder.build()).build();
     }
 
+    public Response update(long id, ProposalDto proposalDto) {
+        if (proposalDto == null || id == 0) {
+            throw new DtoValidationException("data not provided");
+        }
+        if (proposalDto.getName() == null || proposalDto.getName().length() == 0 || proposalDto.getContent() == null || proposalDto.getContent().length() == 0) {
+            throw new DtoValidationException("not all required fields are fulfilled");
+        }
+        proposalDto.setId(id);
+        proposalService.update(proposalDto);
+        return Response.ok().build();
+    }
+
+    public Response changeState(long id, ProposalDto proposalDto) {
+        if (proposalDto == null || proposalDto.getState() == null) {
+            throw new DtoValidationException("Missing data");
+        }
+        if  (!EnumHelper.isInEnum(proposalDto.getState(), ProposalDto.State.class)) {
+            throw new DtoValidationException("Wrong state");
+        }
+
+        if (proposalDto.getState().equals(ProposalDto.State.PUBLISHED.toString()) || proposalDto.getState().equals(ProposalDto.State.REJECTED.toString())) {
+           if (proposalDto.getReason() == null || proposalDto.getReason().length() == 0) {
+               throw new DtoValidationException("Missing reason for state change");
+           }
+        }
+        proposalDto.setId(id);
+        proposalService.changeState(proposalDto);
+
+        return Response.ok().build();
+    }
 
     private void addFilters(StringBuilder query, Map<String, Object> params, MultivaluedMap<String, String> requestParameters) {
         query.append("SELECT DISTINCT p from Proposal p WHERE ");
@@ -102,6 +137,8 @@ public class ProposalResourceMySQL implements IProposalResource {
             params.put("state", "%" + requestParameters.get("state").get(0).toUpperCase() +"%");
         }
 
+        query.append(" UPPER(p.state) not like 'DELETED' ");
+
         if  (query.indexOf("WHERE ") == query.length() - 6) {
             query.delete(query.length() - 7, query.length() - 1);
         }
@@ -112,29 +149,12 @@ public class ProposalResourceMySQL implements IProposalResource {
 
     }
 
-    private void appendOrderAndPagination(StringBuilder query, MultivaluedMap<String, String> requestParameters) {
-        query.append(" order by p.");
-        query.append(requestParameters.get("order").get(0));
-        if (Boolean.parseBoolean(requestParameters.get("ascending").get(0))) {
-            query.append(" ASC");
-        } else {
-            query.append(" DESC");
-        }
-
-    }
     private void setDefaultParameters(MultivaluedMap<String, String> requestParameters) {
         if (requestParameters.get("page") == null){
             requestParameters.put("page", new ArrayList<>() {{add("0");}});
         }
-        if (requestParameters.get("order") == null){
-            requestParameters.put("order", new ArrayList<>() {{add("id");}});
-        }
         if (requestParameters.get("limit") == null){
             requestParameters.put("limit", new ArrayList<>() {{add("10");}});
         }
-        if (requestParameters.get("ascending") == null){
-            requestParameters.put("ascending", new ArrayList<>() {{add("true");}});
-        }
-
     }
 }

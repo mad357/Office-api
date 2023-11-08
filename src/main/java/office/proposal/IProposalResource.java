@@ -10,5 +10,11 @@ public interface IProposalResource {
 
     int listSize(ProposalResource proposalResource);
 
+    ProposalDto getById(long id);
+
     Response create(ProposalResource proposalResource, UriInfo uriInfo, ProposalDto proposalDto);
+
+    Response update(long id, ProposalDto proposalDto);
+
+    Response changeState(long id, ProposalDto proposalDto);
 }

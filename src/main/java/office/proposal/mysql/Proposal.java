@@ -6,7 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import office.user.mysql.User;
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.util.List;
 import jakarta.persistence.*;
 
 @AllArgsConstructor
@@ -44,5 +46,14 @@ public class Proposal implements Serializable {
 
     @Column(name = "MODIFIED_ON")
     private Timestamp modifiedOn;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy="proposal")
+    private List<ProposalHistory> historyList;
+
+    @Column(name = "REASON")
+    private String reason;
+
+    @Column(name = "PUBLISH_ID")
+    private BigInteger publishId;
 
 }

@@ -41,8 +41,27 @@ public class ProposalResource {
         return proposalResource.listSize(this);
     }
 
+    @GET
+    @Path("/{id}")
+    public ProposalDto getProposal(@PathParam("id") long id) {
+        return proposalResource.getById(id);
+    }
+
     @POST
     public Response create(ProposalDto proposalDto, @Context UriInfo uriInfo) {
        return proposalResource.create(this, uriInfo, proposalDto);
     }
+
+    @PUT
+    @Path("/{id}")
+    public Response update(@PathParam("id") long id, ProposalDto proposalDto) {
+        return proposalResource.update(id, proposalDto);
+    }
+
+    @PUT
+    @Path("/{id}/change-state")
+    public Response changeState(@PathParam("id") long id, ProposalDto proposalDto) {
+        return proposalResource.changeState(id, proposalDto);
+    }
+
 }
