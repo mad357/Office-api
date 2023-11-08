@@ -1,11 +1,11 @@
-REST API służące do obsługi wniosków.
-Ścieżka do aplikacji zaczyna się of /office, zaimplementowany enpoint to /proposal, przykładowe wywołanie: GET http://localhost:8080/office/proposal/list
-Styl rozmieszczenia plików źródłowych to Package by Feature
-Endpoint podzielony na dwie części, pierwsza to część wspólna, przyjmuje zapytania i przekazuje je do konkretnej bazy danych. Baze wybiera się podczas inicjalizacja proposalResource, musi dziedziczyć po IProposalResource. W części drugiej została zaimplementowana baza SQL na przykładzie MySQL.
-Zapis historii mógłby odbywać się dynamicznie poprzez refleksje, a nie ręczny wybór pól, ale brakło czasu na implementacje takiego rozwiązania
-Nie znam specyfikacji bazy, więc nie dodaje walidacji typowo bazowej, tzn. maksymalny rozmiar pola
-W przyjmowanym jsonie wielkość znaków ma znaczenie. Klucze podajemy małymi literami, stany wniosków dużymi literami.
-Projekt skupia się na funkcjonalności i przejrzystości, w razie potrzeby niektóre elementy można zmodyfikować tak, by mogłby być współdzielone przez inne endpointy, np. domyślne parametry w query
+REST API służące do obsługi wniosków. <br />
+Ścieżka do aplikacji zaczyna się of /office, zaimplementowany enpoint to /proposal, przykładowe wywołanie: GET http://localhost:8080/office/proposal/list <br />
+Styl rozmieszczenia plików źródłowych to Package by Feature <br />
+Endpoint podzielony na dwie części, pierwsza to część wspólna, przyjmuje zapytania i przekazuje je do konkretnej bazy danych. Baze wybiera się podczas inicjalizacja proposalResource, musi dziedziczyć po IProposalResource. W części drugiej została zaimplementowana baza SQL na przykładzie MySQL. <br />
+Zapis historii mógłby odbywać się dynamicznie poprzez refleksje, a nie ręczny wybór pól, ale brakło czasu na implementacje takiego rozwiązania <br />
+Nie znam specyfikacji bazy, więc nie dodaje walidacji typowo bazowej, tzn. maksymalny rozmiar pola <br />
+W przyjmowanym jsonie wielkość znaków ma znaczenie. Klucze podajemy małymi literami, stany wniosków dużymi literami. <br />
+Projekt skupia się na funkcjonalności i przejrzystości, w razie potrzeby niektóre elementy można zmodyfikować tak, by mogłby być współdzielone przez inne endpointy, np. domyślne parametry w query <br />
 
 Założenia
 - Autoryzacja i Autentykacja została już obsłużona.
