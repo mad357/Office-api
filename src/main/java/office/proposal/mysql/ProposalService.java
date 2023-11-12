@@ -52,12 +52,10 @@ public class ProposalService {
     @Transactional
     public void update(ProposalDto proposalDto) {
         Proposal origin = proposalRepository.findById(proposalDto.getId());
-
-        ProposalDto originDto = modelMapper.map(origin, ProposalDto.class);
-
         if (origin == null) {
             throw new NotFoundException("Proposal was not found");
         }
+        ProposalDto originDto = modelMapper.map(origin, ProposalDto.class);
         if (!(ProposalDto.State.valueOf(origin.getState()).equals(ProposalDto.State.CREATED)  || ProposalDto.State.valueOf(origin.getState()).equals(ProposalDto.State.VERIFIED) ))
         {
             throw new NotAllowedException("Cannot edit due to state");
